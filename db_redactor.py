@@ -1,12 +1,31 @@
-
 import json
 import hashlib
 import pymongo
 from bson.json_util import dumps
 from pprint import pprint
+from cryptography.fernet import Fernet
+import base64
+
+# keys to encrypt/decrypt username/password
+key = hashlib.md5("DHSBFB3DHXNZAJ").hexdigest()
+key_64 = base64.urlsafe_b64encode(key)
 
 
-def connect(username, password):
+# returns encrypted username
+def getUsername():
+    return "gAAAAABdOtrd8SqjxkTb7Pu3EVFdBxOzrhxqvEViNcGNg_UaJ7csPzIAhOaHyFFBU7KZm5vtVqwQpcMim-caw0YJsITGC2157Q=="
+
+
+# returns encrypted password
+def getPassword():
+    return "gAAAAABdOtpvxaaxNgNtUkMbAHuEiQgVmk6tXG-1EkI8HOw1CpksiootGi2xS5YuTCR8FYlF3iL-zc5iE9ORPpZHSoluIBt2Xg=="
+
+
+# decrypts username/password and returns mongodb instance
+def connect():
+    cipher_suite = Fernet(key_64)
+    username = cipher_suite.decrypt(getUsername())
+    password = cipher_suite.decrypt(getPassword())
     return pymongo.MongoClient(
         "mongodb://" + username + ":" + password + "@cluster0-shard-00-00-b1bc1.mongodb.net:27017,"
                                                    "cluster0-shard-00-01-b1bc1.mongodb.net:27017,"
@@ -21,7 +40,7 @@ def redactor(database,collection):
     # Redactor takes the database and collection name and redacts the sensitive fields in the collection with MD5 Hashes
 
     if database == "mflix" and collection=="movies":
-        db = connect("m220student", "m220password").mflix;
+        db = connect().mflix;
         json_input = dumps(db.movies.find().limit(5))
         # Converts returned JSON to Python dict
         json_decoded = json.loads(json_input)
@@ -42,11 +61,4 @@ def redactor(database,collection):
 
 class DbRedactor:
 
-    def __init__(self):
-        pprint(redactor("mflix", "movie"))
-
-
-
-
-
-
+    pprint(redactor("mflix", "movies"))
